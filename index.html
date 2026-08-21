@@ -1,0 +1,323 @@
+<h2 class="sr-only">Interactive 3D model of the room built to real measurements in feet, with updated furniture placement. Drag to rotate, scroll to zoom.</h2>
+<div id="room3d" style="width:100%;max-width:640px;height:420px;margin:0 auto;"></div>
+<p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:8px;">Drag to rotate · scroll to zoom · 1 unit = 1 foot</p>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+  var container = document.getElementById('room3d');
+  var width = 640, height = 420;
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 500);
+  camera.position.set(34, 26, 44);
+  var renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(width, height, false);
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.domElement.style.width = '100%';
+  renderer.domElement.style.height = '100%';
+  renderer.domElement.style.display = 'block';
+  container.appendChild(renderer.domElement);
+
+  var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 6, 0);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 15;
+  controls.maxDistance = 120;
+  controls.update();
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+  var dir1 = new THREE.DirectionalLight(0xffffff, 0.7);
+  dir1.position.set(20, 30, 15);
+  scene.add(dir1);
+  var dir2 = new THREE.DirectionalLight(0xffffff, 0.3);
+  dir2.position.set(-15, 20, -20);
+  scene.add(dir2);
+
+  var H = 12;
+  var centerX = 12, centerZ = 20;
+  var wallColor = 0xb0a99a;
+  var partitionColor = 0xd2ccbb;
+  var windowColor = 0x8fc7e8;
+  var floorColor = 0xcabf9f;
+
+  function addBox(x,z,w,d,h,color,rotY,yBase){
+    var geo = new THREE.BoxGeometry(w,h,d);
+    var mat = new THREE.MeshStandardMaterial({color:color});
+    var mesh = new THREE.Mesh(geo,mat);
+    var base = yBase||0;
+    mesh.position.set(x-centerX, base+h/2, z-centerZ);
+    if(rotY) mesh.rotation.y = rotY;
+    scene.add(mesh);
+  }
+  function addCylinder(x,z,r,h,color,yBase){
+    var geo = new THREE.CylinderGeometry(r,r,h,16);
+    var mat = new THREE.MeshStandardMaterial({color:color});
+    var mesh = new THREE.Mesh(geo,mat);
+    var base = yBase||0;
+    mesh.position.set(x-centerX, base+h/2, z-centerZ);
+    scene.add(mesh);
+  }
+  function addSphere(x,z,y,r,color){
+    var geo = new THREE.SphereGeometry(r,16,12);
+    var mat = new THREE.MeshStandardMaterial({color:color});
+    var mesh = new THREE.Mesh(geo,mat);
+    mesh.position.set(x-centerX, y, z-centerZ);
+    scene.add(mesh);
+  }
+  function buildChair(color){
+    var group = new THREE.Group();
+    var seatMat = new THREE.MeshStandardMaterial({color:color});
+    var seat = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.15,1.5), seatMat);
+    seat.position.set(0,1.4,0);
+    group.add(seat);
+    var back = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.2,0.15), seatMat);
+    back.position.set(0,2.1,-0.65);
+    group.add(back);
+    var legMat = new THREE.MeshStandardMaterial({color:0x6b6b6b});
+    var legPositions = [[-0.6,-0.6],[0.6,-0.6],[-0.6,0.6],[0.6,0.6]];
+    for(var i=0;i<legPositions.length;i++){
+      var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.4,8), legMat);
+      leg.position.set(legPositions[i][0],0.7,legPositions[i][1]);
+      group.add(leg);
+    }
+    return group;
+  }
+  function addChair(x,z,rotY,color){
+    var group = buildChair(color);
+    group.position.set(x-centerX,0,z-centerZ);
+    group.rotation.y = rotY||0;
+    scene.add(group);
+  }
+  function addOfficeChair(x,z,rotY,color){
+    var group = new THREE.Group();
+    var mat = new THREE.MeshStandardMaterial({color:color});
+    var seat = new THREE.Mesh(new THREE.BoxGeometry(1.6,0.2,1.6), mat);
+    seat.position.set(0,1.7,0);
+    group.add(seat);
+    var back = new THREE.Mesh(new THREE.BoxGeometry(1.6,1.6,0.2), mat);
+    back.position.set(0,2.7,-0.7);
+    group.add(back);
+    var poleMat = new THREE.MeshStandardMaterial({color:0x555555, metalness:0.5, roughness:0.4});
+    var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,1.4,8), poleMat);
+    pole.position.set(0,0.9,0);
+    group.add(pole);
+    var baseMat = new THREE.MeshStandardMaterial({color:0x333333});
+    var base = new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,0.12,16), baseMat);
+    base.position.set(0,0.25,0);
+    group.add(base);
+    group.position.set(x-centerX,0,z-centerZ);
+    group.rotation.y = rotY||0;
+    scene.add(group);
+  }
+  function addPlant(x,z){
+    addCylinder(x,z,0.15,1.1,0x6b4a30);
+    addSphere(x,z,1.6,1.1,0x5a8f4a);
+  }
+  function addGlassTable(x,z,w,d,h,rotY){
+    var group = new THREE.Group();
+    var topMat = new THREE.MeshPhysicalMaterial({color:0x4a90c2, transparent:true, opacity:0.42, roughness:0.05, metalness:0, clearcoat:0.6});
+    var top = new THREE.Mesh(new THREE.BoxGeometry(w,0.15,d), topMat);
+    top.position.set(0,h-0.08,0);
+    group.add(top);
+    var legMat = new THREE.MeshStandardMaterial({color:0x9a9a9a, metalness:0.6, roughness:0.4});
+    var legPositions = [[-(w/2-0.15),-(d/2-0.15)],[(w/2-0.15),-(d/2-0.15)],[-(w/2-0.15),(d/2-0.15)],[(w/2-0.15),(d/2-0.15)]];
+    for(var i=0;i<legPositions.length;i++){
+      var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,h-0.15,8), legMat);
+      leg.position.set(legPositions[i][0],(h-0.15)/2,legPositions[i][1]);
+      group.add(leg);
+    }
+    group.position.set(x-centerX,0,z-centerZ);
+    if(rotY) group.rotation.y = rotY;
+    scene.add(group);
+  }
+  function addWhiteDesk(x,z,w,d,h,rotY){
+    var group = new THREE.Group();
+    var topMat = new THREE.MeshStandardMaterial({color:0xf5f5f0});
+    var top = new THREE.Mesh(new THREE.BoxGeometry(w,0.15,d), topMat);
+    top.position.set(0,h-0.08,0);
+    group.add(top);
+    var legMat = new THREE.MeshStandardMaterial({color:0xf0f0ea});
+    var legPositions = [[-(w/2-0.15),-(d/2-0.15)],[(w/2-0.15),-(d/2-0.15)],[-(w/2-0.15),(d/2-0.15)],[(w/2-0.15),(d/2-0.15)]];
+    for(var i=0;i<legPositions.length;i++){
+      var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,h-0.15,8), legMat);
+      leg.position.set(legPositions[i][0],(h-0.15)/2,legPositions[i][1]);
+      group.add(leg);
+    }
+    group.position.set(x-centerX,0,z-centerZ);
+    if(rotY) group.rotation.y = rotY;
+    scene.add(group);
+  }
+  function addRugCircle(x,z,radius,color){
+    var geo = new THREE.CircleGeometry(radius,32);
+    var mat = new THREE.MeshStandardMaterial({color:color, side:THREE.DoubleSide});
+    var mesh = new THREE.Mesh(geo,mat);
+    mesh.rotation.x = -Math.PI/2;
+    mesh.position.set(x-centerX,0.03,z-centerZ);
+    scene.add(mesh);
+  }
+  function addCouch(x,z,w,d,rotY,color){
+    var group = new THREE.Group();
+    var mat = new THREE.MeshStandardMaterial({color:color});
+    var seat = new THREE.Mesh(new THREE.BoxGeometry(w,0.9,d), mat);
+    seat.position.set(0,0.45,0);
+    group.add(seat);
+    var back = new THREE.Mesh(new THREE.BoxGeometry(w,1.4,0.4), mat);
+    back.position.set(0,1.1,-(d/2-0.2));
+    group.add(back);
+    var armL = new THREE.Mesh(new THREE.BoxGeometry(0.4,1.2,d), mat);
+    armL.position.set(-(w/2-0.2),1.0,0);
+    group.add(armL);
+    var armR = new THREE.Mesh(new THREE.BoxGeometry(0.4,1.2,d), mat);
+    armR.position.set((w/2-0.2),1.0,0);
+    group.add(armR);
+    group.position.set(x-centerX,0,z-centerZ);
+    if(rotY) group.rotation.y = rotY;
+    scene.add(group);
+  }
+  function addArmchair(x,z,rotY,color){
+    var group = new THREE.Group();
+    var mat = new THREE.MeshStandardMaterial({color:color});
+    var seat = new THREE.Mesh(new THREE.BoxGeometry(2.4,0.9,2.4), mat);
+    seat.position.set(0,0.45,0);
+    group.add(seat);
+    var back = new THREE.Mesh(new THREE.BoxGeometry(2.4,1.5,0.4), mat);
+    back.position.set(0,1.2,-0.9);
+    group.add(back);
+    var armL = new THREE.Mesh(new THREE.BoxGeometry(0.4,1.2,2.4), mat);
+    armL.position.set(-1.0,1.0,0);
+    group.add(armL);
+    var armR = new THREE.Mesh(new THREE.BoxGeometry(0.4,1.2,2.4), mat);
+    armR.position.set(1.0,1.0,0);
+    group.add(armR);
+    group.position.set(x-centerX,0,z-centerZ);
+    if(rotY) group.rotation.y = rotY;
+    scene.add(group);
+  }
+  function addCubeShelf(x,z,length,shelfHeight,depth,cols,rows,color,yBase){
+    var base = yBase||0;
+    var group = new THREE.Group();
+    var mat = new THREE.MeshStandardMaterial({color:color});
+    var t = 0.06;
+
+    var back = new THREE.Mesh(new THREE.BoxGeometry(t,shelfHeight,length), mat);
+    back.position.set(depth/2-t/2, base+shelfHeight/2, 0);
+    group.add(back);
+
+    var top = new THREE.Mesh(new THREE.BoxGeometry(depth,t,length), mat);
+    top.position.set(0, base+shelfHeight-t/2, 0);
+    group.add(top);
+
+    var bottom = new THREE.Mesh(new THREE.BoxGeometry(depth,t,length), mat);
+    bottom.position.set(0, base+t/2, 0);
+    group.add(bottom);
+
+    var leftEnd = new THREE.Mesh(new THREE.BoxGeometry(depth,shelfHeight,t), mat);
+    leftEnd.position.set(0, base+shelfHeight/2, -length/2+t/2);
+    group.add(leftEnd);
+
+    var rightEnd = new THREE.Mesh(new THREE.BoxGeometry(depth,shelfHeight,t), mat);
+    rightEnd.position.set(0, base+shelfHeight/2, length/2-t/2);
+    group.add(rightEnd);
+
+    var colW = length/cols;
+    for(var c=1;c<cols;c++){
+      var vDiv = new THREE.Mesh(new THREE.BoxGeometry(depth,shelfHeight,t), mat);
+      vDiv.position.set(0, base+shelfHeight/2, -length/2+c*colW);
+      group.add(vDiv);
+    }
+
+    var rowH = shelfHeight/rows;
+    for(var r=1;r<rows;r++){
+      var hDiv = new THREE.Mesh(new THREE.BoxGeometry(depth,t,length), mat);
+      hDiv.position.set(0, base+r*rowH, 0);
+      group.add(hDiv);
+    }
+
+    group.position.set(x-centerX,0,z-centerZ);
+    scene.add(group);
+  }
+  function wallBox(x1, y1, x2, y2, thickness, color, opacity){
+    var length = Math.hypot(x2-x1, y2-y1);
+    var horizontal = Math.abs(y2-y1) < 0.01;
+    var w = horizontal ? length : thickness;
+    var d = horizontal ? thickness : length;
+    var geo = new THREE.BoxGeometry(w, H, d);
+    var mat = new THREE.MeshStandardMaterial({color: color, transparent: !!opacity, opacity: opacity || 1});
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set((x1+x2)/2 - centerX, H/2, (y1+y2)/2 - centerZ);
+    scene.add(mesh);
+  }
+
+  wallBox(0,0,2,0, 0.4, wallColor);
+  wallBox(6,0,24,0, 0.4, wallColor);
+  addBox(4,0,4,0.4,5.5,wallColor,0,6.5);
+
+  wallBox(24,0,24,40, 0.4, wallColor);
+  wallBox(0,0,0,40, 0.4, wallColor);
+  wallBox(0,40,24,40, 0.4, windowColor, 0.4);
+
+  wallBox(8,0,8,16, 0.3, partitionColor);
+  wallBox(8,18.5,8,20, 0.3, partitionColor);
+  wallBox(8,14.5,24,14.5, 0.3, partitionColor);
+  wallBox(8,20,24,20, 0.3, partitionColor);
+
+  addBox(3,0,2,0.15,6.4,0x808080);
+  addBox(5,0,2,0.15,6.4,0x808080);
+
+  var floorGeo = new THREE.BoxGeometry(24, 0.2, 40);
+  var floorMat = new THREE.MeshStandardMaterial({color: floorColor});
+  var floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.position.set(0, -0.1, 0);
+  scene.add(floor);
+
+  addBox(4,10,6,18,0.05,0x1e3a5f,0,0.03);
+
+  addBox(0.75,5,1.5,5,2,0x8a6d4f);
+
+  addBox(1,25,2,6,2.5,0xf5f5f0);
+
+  addBox(13,21,4,2,4,0x707070);
+
+  addWhiteDesk(20,21.25,4,2.5,2.4,0);
+  addOfficeChair(20,23.3,Math.PI,0xe0e0e0);
+  addRugCircle(5,33,4.5,0x1e3a5f);
+  addCouch(1.4,33,6,2.5,Math.PI/2,0x7d97a6);
+  addArmchair(8,30.5,-1.1,0x7d97a6);
+  addPlant(1.5,38.5);
+  addPlant(23,39);
+
+  var tableGroup = new THREE.Group();
+  var tableTop = new THREE.Mesh(new THREE.BoxGeometry(8,2.4,3.5), new THREE.MeshStandardMaterial({color:0x8a6d4f}));
+  tableTop.position.set(0,1.2,0);
+  tableGroup.add(tableTop);
+  var chairXs = [-2.6,0,2.6];
+  for(var i=0;i<chairXs.length;i++){
+    var cN = buildChair(0xc97b63);
+    cN.position.set(chairXs[i],0,-1.9);
+    cN.rotation.y = 0;
+    tableGroup.add(cN);
+    var cS = buildChair(0xc97b63);
+    cS.position.set(chairXs[i],0,1.9);
+    cS.rotation.y = Math.PI;
+    tableGroup.add(cS);
+  }
+  tableGroup.position.set(13-centerX,0,27-centerZ);
+  tableGroup.rotation.y = -0.6;
+  scene.add(tableGroup);
+
+  addGlassTable(20,32,2,5,2.4,0);
+  addOfficeChair(21.9,32,-Math.PI/2,0x3a3a3a);
+  addCubeShelf(23,31.25,16.5,2.4,1.3,16,2,0xf5f5f0,0);
+
+  addSphere(5,38,10,0.9,0x5a8f4a);
+  addSphere(19,38,10,0.9,0x5a8f4a);
+
+  function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
